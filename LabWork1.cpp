@@ -1,4 +1,10 @@
-// COMPLETELY NOT FINAL VERSION!!!!!1!!!1!!
+/*
+Andikalovskiy Nikita Dmitrievich
+24.B-82mm
+st131335@student.spbu.ru
+LabWork 1
+*/
+
 #include <iostream>
 #include <fstream>
 #include <cstdint>
@@ -25,26 +31,24 @@ T clamp(T value, T low, T high)
 class BMPfilehead // class for file header
 {
 public:
-    int filetype;
-    int filesize;
-    int offset;
-    int reserved1;
-    int reserved2;
+    uint16_t filetype;
+    uint32_t filesize;
+    uint32_t offset;
+    uint32_t reserved1;
+    uint32_t reserved2;
 };
 
 class BMPinfo // class for info header
 {
 public:
-    int size;
-    int width;
-    int height;
-    int planes;
-    int bitperpixel;
-    int compression;
-    int imagesize;
+    uint32_t size;
+    int32_t width;
+    int32_t height;
+    uint16_t planes;
+    uint16_t bitperpixel;
+    uint32_t compression;
+    uint32_t imagesize;
 };
-
-const char* filename = "image.bmp";
 
 size_t findmemorysize(const BMPinfo& info) // function that finds how much memory is needed to load img
 {
@@ -54,18 +58,44 @@ size_t findmemorysize(const BMPinfo& info) // function that finds how much memor
 }
 
 
-int* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening file and loading it's data
+uint8_t* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening file and loading it's data
 {
     BMPfilehead filehead;
     
     std::ifstream infile(filename, std::ios::binary); // reading file header and info header
+    
+        if(!infile)
+    {
+        std::cerr << "cannot open file!" << std::endl;
+        return nullptr;
+    }
+
     infile.read(reinterpret_cast<char*>(&filehead), sizeof(filehead));
+
+        if(filehead.filetype != 0x4D42)
+        {
+            std::cerr << "Not a BMP file" << std::endl;
+            return nullptr;
+        }
+
     infile.read(reinterpret_cast<char*>(&info), sizeof(info));
     
+    std::cout << "width: " << info.width << std::endl;
+    std::cout << "height: " << info.height << std::endl;
+    std::cout << "bits per pixel: " << info.bitperpixel << std::endl;
+
     imgsize = findmemorysize(info); // counting how much memory we need for img
-    
+
+    if (imgsize <= 0 || imgsize > 1e8)
+    {
+        std::cerr << "Size is incorrect" << std::endl;
+    }
+
+    std::cout << "Img size is " << imgsize <<std::endl;
+
     infile.seekg(filehead.offset, std::ios::beg);
-    int* imgdata = new int [imgsize]; // making array for imgdata
+
+    uint8_t* imgdata = new uint8_t[imgsize]; // making array for imgdata
     infile.read(reinterpret_cast<char*>(imgdata), imgsize);
     
     infile.close();
@@ -73,7 +103,7 @@ int* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening file 
     return imgdata;
 }
 
-void save(const char* filename, const int* imgdata, size_t imgsize, const BMPinfo& info)
+void save(const char* filename, const uint8_t* imgdata, size_t imgsize, const BMPinfo& info)
 {
     BMPfilehead filehead;
     filehead.filetype = 0xD42;
@@ -95,14 +125,14 @@ void save(const char* filename, const int* imgdata, size_t imgsize, const BMPinf
     
 }
 
-void rotateforward(int* imgdata, BMPinfo& info, size_t imgsize)
+void rotateforward(uint8_t* imgdata, BMPinfo& info, size_t imgsize)
 {
     int width = info.width;
     int height = info.height;
     int byteperpixel = info.bitperpixel / 8;
     int stringsize = (width * byteperpixel + 3) & ~3;
     
-    int* rotateddata = new int[width * height * byteperpixel];
+    uint8_t* rotateddata = new uint8_t[height * stringsize];
     
     for (int y = 0; y < height; ++y)
     {
@@ -110,7 +140,10 @@ void rotateforward(int* imgdata, BMPinfo& info, size_t imgsize)
         {
             int original = (y * stringsize) + (x * byteperpixel);
             int rotated = (width - 1 -x) * stringsize + (y * byteperpixel);
+            if(original < imgsize && rotated < imgsize)
+            {
             std::memcpy(&rotateddata[rotated], &imgdata[original], byteperpixel);
+            }
         }
     }
     
@@ -119,14 +152,14 @@ void rotateforward(int* imgdata, BMPinfo& info, size_t imgsize)
     imgdata = rotateddata;
 }
 
-void rotatebackwards(int* imgdata, BMPinfo& info, size_t imgsize)
+void rotatebackwards(uint8_t* imgdata, BMPinfo& info, size_t imgsize)
 {
     int width = info.width;
     int height = info.height;
     int byteperpixel = info.bitperpixel / 8;
     int stringsize = (width * byteperpixel + 3) & ~3;
     
-    int* rotateddata = new int[width * height * byteperpixel];
+    uint8_t* rotateddata = new uint8_t[height * stringsize];
     
     for (int y = 0; y < height; ++y)
     {
@@ -143,7 +176,7 @@ void rotatebackwards(int* imgdata, BMPinfo& info, size_t imgsize)
     imgdata = rotateddata;
 }
 
-void blur(int* imgdata, BMPinfo& info)
+void blur(uint8_t* imgdata, BMPinfo& info)
 {
     int width = info.width;
     int height = info.height;
@@ -162,7 +195,7 @@ void blur(int* imgdata, BMPinfo& info)
     
     for (int y = 1; y < height - 1; ++y)
     {
-        for (int x = 1; y < width - 1; ++x)
+        for (int x = 1; x < width - 1; ++x)
         {
             for (int channel = 0; channel < byteperpixel; ++channel)
             {
@@ -176,7 +209,10 @@ void blur(int* imgdata, BMPinfo& info)
                         int pY = y + ky;
                         int res = pY * stringsize + pX * byteperpixel + channel;
                         
-                        blurred += imgdata[res] * kernel[ky+1][kx+1];
+                        if (res >= 0 && res < height * stringsize)
+                        {
+                            blurred += imgdata[res] * kernel[ky+1][kx+1];
+                        }
                     }
                 }
                 
@@ -191,10 +227,10 @@ void blur(int* imgdata, BMPinfo& info)
 
 int main()
 {
-    const char* filename = "img.bmp";
+    const char* filename = "/Users/cyrep/Documents/image.bmp";
     size_t imgsize = 0;
     BMPinfo info;
-    int* imgdata = load(filename, imgsize, info);
+    uint8_t* imgdata = load(filename, imgsize, info);
     
     if(imgdata)
     {
