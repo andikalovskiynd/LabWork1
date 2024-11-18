@@ -264,7 +264,7 @@ void blur(uint8_t* imgdata, BMPinfo& info)
 
 int main()
 {
-    const char* filename = "/Users/cyrep/Documents/blackbuck.bmp";
+    const char* filename = "image.bmp";
     BMPinfo info;
     size_t imgsize = 0;
     uint8_t* imgdata = load(filename, imgsize, info);
@@ -274,10 +274,10 @@ int main()
         std::cout << "Image is successfully loaded. Size of it is " << imgsize << " bytes." << std::endl;
         
         rotateforward(imgdata, info, imgsize);
-        save("/Users/cyrep/Documents/rotated1.bmp", imgdata, imgsize, info);
+        save("rotated1.bmp", imgdata, imgsize, info);
         
         rotatebackwards(imgdata, info, imgsize);
-        save("/Users/cyrep/Documents/rotated1and2.bmp", imgdata, imgsize, info);
+        save("rotated1and2.bmp", imgdata, imgsize, info);
 
         delete[] imgdata;
     }
