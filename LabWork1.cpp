@@ -5,6 +5,8 @@ st131335@student.spbu.ru
 LabWork 1
 */
 
+// The code still not working but i'm trying to fix that ASAP
+
 #include <iostream>
 #include <fstream>
 #include <cstdint>
