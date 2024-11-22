@@ -5,8 +5,6 @@ st131335@student.spbu.ru
 LabWork 1
 */
 
-// Code is still not working but trying to fix that ASAP
-
 #include <iostream>
 #include <fstream>
 #include <cstdint>
@@ -30,14 +28,16 @@ T clamp(T value, T low, T high)
     }
 }
 
+#pragma pack(1)
 struct BMPfilehead 
 {
     uint16_t filetype;
     uint32_t filesize;
-    uint32_t reserved1;
-    uint32_t reserved2;
+    uint16_t reserved1;
+    uint16_t reserved2;
     uint32_t offset;
 };
+#pragma pack()
 
 struct BMPinfo 
 {
@@ -48,7 +48,12 @@ struct BMPinfo
     uint16_t bitperpixel;
     uint32_t compression;
     uint32_t imagesize;
+    int32_t x_pixels_per_meter;
+    int32_t y_pixels_per_meter;
+    uint32_t colors_used;
+    uint32_t colors_important;
 };
+
 
 bool readBMPinfo(const char* filename, BMPinfo& info) {
     
@@ -71,6 +76,9 @@ bool readBMPinfo(const char* filename, BMPinfo& info) {
 
 uint8_t* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening file and loading it's data
 {
+    BMPfilehead filehead;
+    filehead.offset = sizeof(BMPinfo) + sizeof(BMPfilehead);
+
     if (!readBMPinfo(filename, info))
     {
         return nullptr;
@@ -101,9 +109,8 @@ uint8_t* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening f
     size_t stringsize = (info.width * (info.bitperpixel / 8) +3 ) & ~3;
     imgsize = stringsize * std::abs(info.height);
    
-    BMPfilehead filehead;
     std::cout << "Image size: " << imgsize << std::endl;
-    std::cout << "Expected file size: " << filehead.offset + imgsize << std::endl;
+    std::cout << "Expected file size 1: " << filehead.offset + imgsize << std::endl;
 
     uint8_t* imgdata = new uint8_t[imgsize];
 
@@ -144,7 +151,7 @@ void save(const char* filename, const uint8_t* imgdata, size_t imgsize, BMPinfo&
     outfile.write(reinterpret_cast<const char*>(&filehead), sizeof(filehead));
     
     std::cout << "Image size: " << imgsize << std::endl;
-    std::cout << "Expected file size: " << filehead.offset + imgsize << std::endl;
+    std::cout << "Expected file size 2: " << filehead.offset + imgsize << std::endl;
 
     info.imagesize = imgsize;
 
@@ -166,100 +173,69 @@ void save(const char* filename, const uint8_t* imgdata, size_t imgsize, BMPinfo&
     
 }
 
-void rotateforward(uint8_t* imgdata, BMPinfo& info, size_t& imgsize)
+void rotateforward(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize)
 {
-    size_t stringSize = (info.width * (info.bitperpixel / 8) + 3 ) & ~3;
+    size_t stringSize = (info.width * (info.bitperpixel / 8) + 3) & ~3;
     size_t rotatedStringSize = (info.height * (info.bitperpixel / 8) + 3) & ~3;
     size_t rotatedSize = rotatedStringSize * info.width;
 
-    if (rotatedSize == 0)
-    {
-        std::cerr << "RFW: err: Memory fail" << std::endl;
-        return;
-    }
-
     uint8_t* rotated = new uint8_t[rotatedSize];
-    if (!rotated)
+    if (!rotated) 
     {
-        std::cerr << "RFW: err: Memory failed!";
+        std::cerr << "RFW: Error: Memory failed!" << std::endl;
         return;
     }
 
-    for (int y = 0; y < info.height; ++y)
+
+    for (int y = 0; y < info.height; ++y) 
     {
-        for (int x = 0; x < info.width; ++x)
+        for (int x = 0; x < info.width; ++x) 
         {
-            size_t oldPixel = y * stringSize + x * (info.bitperpixel / 8);
-            size_t newPixel = (info.width - 1 - x) * rotatedStringSize + y * (info.bitperpixel / 8);
-            std::memcpy(&rotated[newPixel], &imgdata[oldPixel], info.bitperpixel / 8);
+            size_t oldIndex = y * stringSize + x * (info.bitperpixel / 8);
+            size_t newIndex = (info.width - 1 - x) * rotatedStringSize + y * (info.bitperpixel / 8);
+            std::memcpy(&rotated[newIndex], &imgdata[oldIndex], info.bitperpixel / 8);
         }
     }
 
     delete[] imgdata;
     imgdata = rotated;
-    
+
     std::swap(info.width, info.height);
     imgsize = rotatedStringSize * info.width;
 
-    BMPfilehead filehead;
-    filehead.offset = sizeof(BMPinfo) + sizeof(BMPfilehead);
-    std::cout << "String size: " << stringSize << std::endl;
-    std::cout << "Image size: " << imgsize << std::endl;
-    std::cout << "Expected file size: " << filehead.offset + imgsize << std::endl;
-
-    std::cout << "RFW: Forward rotation completed successfully" << std::endl;
+    std::cout << "RFW: Forward rotation completed successfully!" << std::endl;
 }
 
-void rotatebackwards(uint8_t* imgdata, BMPinfo& info, size_t& imgsize)
+void rotatebackwards(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize)
 {
-    size_t stringSize = (info.width * (info.bitperpixel / 8) + 3 ) & ~3;
+    size_t stringSize = (info.width * (info.bitperpixel / 8) + 3) & ~3;
     size_t rotatedStringSize = (info.height * (info.bitperpixel / 8) + 3) & ~3;
     size_t rotatedSize = rotatedStringSize * info.width;
 
-    if (rotatedSize == 0)
-    {
-        std::cerr << "RBW: err: Memory fail" << std::endl;
-        return;
-    }
-
     uint8_t* rotated = new uint8_t[rotatedSize];
-    if (!rotated)
-    {
-        std::cerr << "RBW: err: Memory failed!";
+    if (!rotated) {
+        std::cerr << "RBW: Error: Memory allocation failed!" << std::endl;
         return;
     }
 
-    for (int y = 0; y < info.height; ++y)
+    for (int y = 0; y < info.height; ++y) 
     {
-        for (int x = 0; x < info.width; ++x)
+        for (int x = 0; x < info.width; ++x) 
         {
-            size_t oldPixel = y * stringSize + x * (info.bitperpixel / 8);
-            size_t newPixel = x * rotatedStringSize + (info.height - y - 1) * (info.bitperpixel / 8);
 
-            std::memcpy(&rotated[newPixel], &imgdata[oldPixel], info.bitperpixel / 8);
+            size_t oldIndex = y * stringSize + x * (info.bitperpixel / 8);
+            size_t newIndex = x * rotatedStringSize + (info.height - 1 - y) * (info.bitperpixel / 8);
+            std::memcpy(&rotated[newIndex], &imgdata[oldIndex], info.bitperpixel / 8);
         }
     }
 
     delete[] imgdata;
     imgdata = rotated;
-    
+
     std::swap(info.width, info.height);
     imgsize = rotatedStringSize * info.width;
 
-    size_t newStringSize = (info.width * (info.bitperpixel / 8) + 3) & ~3;
-
-    BMPfilehead filehead;
-    filehead.offset = sizeof(BMPinfo) + sizeof(BMPfilehead);
-    std::cout << "String size: " << newStringSize << std::endl;
-    std::cout << "Image size: " << imgsize << std::endl;
-    std::cout << "Expected file size: " << filehead.offset + imgsize << std::endl;
-
-    std::cout << "RBW: Backward rotation completed successfully" << std::endl;
-}
-
-void blur(uint8_t* imgdata, BMPinfo& info)
-{
-    
+    std::cout << "RBW: Backward rotation completed successfully!" << std::endl;
 }
 
 int main()
@@ -268,6 +244,14 @@ int main()
     BMPinfo info;
     size_t imgsize = 0;
     uint8_t* imgdata = load(filename, imgsize, info);
+    BMPfilehead filehead;
+
+    std::cout << "Size of BMPfilehead is " << sizeof(BMPfilehead) << ", Size of BMPinfo is " << sizeof(BMPinfo) << std::endl;
+    std::cout << "  SIZE OF FILETYPE IS " << sizeof(filehead.filetype) << std::endl;
+    std::cout << "  SIZE OF FILEsize IS " << sizeof(filehead.filesize) << std::endl;
+    std::cout << "  SIZE OF reserved1 is " << sizeof(filehead.reserved1) << std::endl;
+    std::cout << "  SIZE OF reserved2 is " << sizeof(filehead.reserved2) << std::endl;
+    std::cout << "  SIZE OF offset IS " << sizeof(filehead.offset) << std::endl;
     
     if(imgdata)
     {
@@ -275,11 +259,9 @@ int main()
         
         rotateforward(imgdata, info, imgsize);
         save("rotated1.bmp", imgdata, imgsize, info);
-        
+
         rotatebackwards(imgdata, info, imgsize);
         save("rotated1and2.bmp", imgdata, imgsize, info);
-
-        delete[] imgdata;
     }
 
     else
