@@ -8,4 +8,4 @@ LabWork 1. Gets BMP file, finds how much memore is need for it, rotating it cloc
 ## Build
 make
 ## Run
-./labwork1
+./labwork
