@@ -135,7 +135,7 @@ void rotateforward(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize) {
   size_t rotatedStringSize = (info.height * (info.bitperpixel / 8) + 3) & ~3;
   size_t rotatedSize = rotatedStringSize * info.width;
 
-  uint8_t* rotated = new uint8_t[rotatedSize];
+  uint8_t* rotated = new uint8_t[rotatedSize]();
   if (!rotated) {
     std::cerr << "RFW: Error: Memory failed!" << std::endl;
     return;
@@ -154,7 +154,7 @@ void rotateforward(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize) {
   imgdata = rotated;
 
   std::swap(info.width, info.height);
-  imgsize = rotatedStringSize * info.width;
+  imgsize = rotatedSize;
 
   std::cout << "RFW: Forward rotation completed successfully!" << std::endl;
 }
@@ -164,7 +164,7 @@ void rotatebackwards(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize) {
   size_t rotatedStringSize = (info.height * (info.bitperpixel / 8) + 3) & ~3;
   size_t rotatedSize = rotatedStringSize * info.width;
 
-  uint8_t* rotated = new uint8_t[rotatedSize];
+  uint8_t* rotated = new uint8_t[rotatedSize]();
   if (!rotated) {
     std::cerr << "RBW: Error: Memory allocation failed!" << std::endl;
     return;
@@ -183,11 +183,10 @@ void rotatebackwards(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize) {
   imgdata = rotated;
 
   std::swap(info.width, info.height);
-  imgsize = rotatedStringSize * info.width;
+  imgsize = rotatedSize;
 
   std::cout << "RBW: Backward rotation completed successfully!" << std::endl;
 }
-
 void blur(uint8_t*& imgdata, BMPinfo& info) {
   const int kernelsize = 5;
   const int halfKernel = kernelsize / 2;
