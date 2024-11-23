@@ -84,6 +84,11 @@ uint8_t* load(const char* filename, size_t& imgsize, BMPinfo& info) // opening f
         return nullptr;
     }
 
+    if (filehead.filetype != 0x4D42)
+    {
+        std::cout << "Incorrect filetype!" << std::endl;
+    }
+
     if (info.bitperpixel != 24)
     {
         std::cerr << "LOAD: Err: Only 24 bit BMP files supported!" << std::endl;
@@ -238,6 +243,62 @@ void rotatebackwards(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize)
     std::cout << "RBW: Backward rotation completed successfully!" << std::endl;
 }
 
+void blur(uint8_t*& imgdata, BMPinfo& info) 
+{
+    const int kernelsize = 5;
+    const int halfKernel = kernelsize / 2;
+    const float kernel[5][5] =
+    {
+        {1 / 273.0f,  4 / 273.0f,  7 / 273.0f,  4 / 273.0f,  1 / 273.0f},
+        {4 / 273.0f, 16 / 273.0f, 26 / 273.0f, 16 / 273.0f,  4 / 273.0f},
+        {7 / 273.0f, 26 / 273.0f, 41 / 273.0f, 26 / 273.0f,  7 / 273.0f},
+        {4 / 273.0f, 16 / 273.0f, 26 / 273.0f, 16 / 273.0f,  4 / 273.0f},
+        {1 / 273.0f,  4 / 273.0f,  7 / 273.0f,  4 / 273.0f,  1 / 273.0f}
+    };
+
+    size_t stringSize = (info.width * (info.bitperpixel / 8) +3 ) & ~3;
+
+    uint8_t* temporaryArray = new uint8_t[stringSize * info.height];
+
+    for (int y = 0; y < info.height; ++y)
+    {
+        for (int x = 0; x < info.width; ++x)
+        {
+            float r = 0.0f;
+            float g = 0.0f;
+            float b = 0.0f;
+
+            for (int ay = -halfKernel; ay <= halfKernel; ++ay)
+            {
+                for (int bx = -halfKernel; bx <= halfKernel; ++bx)
+                {
+                    int cx = clamp(x + bx, 0, info.width - 1);
+                    int dy = clamp(y + ay, 0, info.height - 1);
+
+                    size_t pixelIndex = dy * stringSize + cx * (info.bitperpixel / 8);
+                    float weight = kernel[ay + halfKernel][bx + halfKernel];
+                    
+                    b += imgdata[pixelIndex + 0] * weight;
+                    g += imgdata[pixelIndex + 1] * weight;
+                    r += imgdata[pixelIndex + 2] * weight;
+
+                }
+            }
+
+            size_t newPixelIndex = y * stringSize + x * (info.bitperpixel / 8);
+            temporaryArray[newPixelIndex + 0] = static_cast<uint8_t>(clamp(b, 0.0f, 255.0f));
+            temporaryArray[newPixelIndex + 1] = static_cast<uint8_t>(clamp(g, 0.0f, 255.0f));
+            temporaryArray[newPixelIndex + 2] = static_cast<uint8_t>(clamp(r, 0.0f, 255.0f));
+        }
+    }
+
+    std::memcpy(imgdata, temporaryArray, stringSize * info.height);
+    delete[] temporaryArray;
+
+    std::cout << "Blurred successfully" << std::endl;
+}
+
+
 int main()
 {
     const char* filename = "image.bmp";
@@ -262,6 +323,9 @@ int main()
 
         rotatebackwards(imgdata, info, imgsize);
         save("rotated1and2.bmp", imgdata, imgsize, info);
+
+        blur(imgdata, info);
+        save("rotatedAndBlurred.bmp", imgdata, imgsize, info);
     }
 
     else
