@@ -46,7 +46,7 @@ int main() {
         delete[] seqData;
     }
 
-    std::cout << "Total time for " << REPETITIONS << " sequential runs is " << sequentTime << " ms" << std::endl;
+    std::cout << "\n Total time for " << REPETITIONS << " sequential runs is " << sequentTime << " ms" << std::endl;
     std::cout << "Average sequential time per run: " << static_cast<double>(sequentTime) / REPETITIONS << " ms" << std::endl;
 
     long long parallelTime = 0;
@@ -67,14 +67,14 @@ int main() {
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        sequentTime += duration.count();
+        parallelTime += duration.count();
 
         delete[] parData;
     }
 
-    std::cout << "Total time for " << REPETITIONS << " parallel runs: " << parallelTime << " ms" << std::endl;
+    std::cout << "\n Total time for " << REPETITIONS << " parallel runs: " << parallelTime << " ms" << std::endl;
     std::cout << "Average parallel time per run: " << static_cast<double>(parallelTime) / REPETITIONS << " ms" << std::endl;
 
-    std::cout << "Totally parallel is " << sequentTime - parallelTime << " ms faster than sequent." << std::endl;
+    std::cout << "\n Totally parallel is " << sequentTime - parallelTime << " ms faster than sequent." << std::endl;
     std::cout << "Averagely parallel is " << static_cast<double>(sequentTime) / REPETITIONS - static_cast<double>(parallelTime) / REPETITIONS<< " ms faster than sequent." << std::endl;
 }
