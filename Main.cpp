@@ -77,4 +77,6 @@ int main() {
 
     std::cout << "\n Totally parallel is " << sequentTime - parallelTime << " ms faster than sequent." << std::endl;
     std::cout << "Averagely parallel is " << static_cast<double>(sequentTime) / REPETITIONS - static_cast<double>(parallelTime) / REPETITIONS<< " ms faster than sequent." << std::endl;
+
+    return 0;
 }
