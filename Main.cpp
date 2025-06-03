@@ -1,3 +1,8 @@
+/**
+ * @file Main.cpp 
+ * @brief Main file where the task is being completed. 
+*/
+
 /*
 Andikalovskiy Nikita Dmitrievich
 24.B-82mm

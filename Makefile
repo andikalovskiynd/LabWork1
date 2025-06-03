@@ -39,8 +39,10 @@ test: $(TESTPROJECT)
 .PHONY: clean
 clean:
 	rm -f *.o
-
-cleanall: clean
 	rm -f $(PROJECT)
 	rm -f $(LIBPROJECT)
 	rm -f $(TESTPROJECT)
+	rm -f rotated1.bmp
+	rm -f rotated2.bmp
+	rm -f rotated1and2.bmp
+	rm -f rotatedAndBlurred.bmp

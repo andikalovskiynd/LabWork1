@@ -1,3 +1,8 @@
+/**
+ * @file Functions.cpp 
+ * @brief Implementation of Functions.h functions.
+*/
+
 /*
 Andikalovskiy Nikita Dmitrievich
 24.B-82mm
@@ -8,8 +13,18 @@ LabWork 1
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <thread>
+
 #include "Functions.h"
 
+/**
+ * @brief Template function that checks if value is in range. 
+ * @tparam T Value that is being checked. Should support standard operators. 
+ * @param value Value that we want to check. 
+ * @param low Lower boundary of checking. 
+ * @param high Higher boundary of checking. 
+ * @return Low if value is less than low, high if value is greater than high, value otherwise. 
+*/
 template <typename T>
 T clamp(T value, T low, T high) {
   if (value < low) {
@@ -187,7 +202,48 @@ void rotatebackwards(uint8_t*& imgdata, BMPinfo& info, size_t& imgsize) {
 
   std::cout << "RBW: Backward rotation completed successfully!" << std::endl;
 }
-void blur(uint8_t*& imgdata, BMPinfo& info) {
+
+void blurSegment(uint8_t* imgdata, uint8_t* temporaryArray, const BMPinfo& info, int start_y, int end_y, size_t stringSize, const float kernel[5][5], int halfKernel)
+{
+  for (int y = start_y; y < end_y; ++y)
+  {
+    for (int x = 0; x < info.width; ++x)
+    {
+      float r = 0.0f;
+      float g = 0.0f;
+      float b = 0.0f;
+
+      for (int _y = -halfKernel; _y <= halfKernel; ++_y)
+      {
+        for (int _x = -halfKernel; _x <= halfKernel; ++_x)
+        {
+          // using clamp to be sure that we are still in borders of the image
+          int X = clamp(x + _x, 0, info.width - 1);
+          int Y = clamp(y + _y, 0, info.width - 1);
+
+          // index in imgdata array
+          size_t pixelIndex = Y * stringSize + X * (info.bitperpixel / 8);
+
+          // same operation as in full 'blur' earlier
+          float weight = kernel[_y + halfKernel][_x + halfKernel];
+
+          b += imgdata[pixelIndex + 0] * weight;
+          g += imgdata[pixelIndex + 1] * weight; 
+          r += imgdata[pixelIndex + 2] * weight; 
+        }
+      }
+
+      size_t newPixelIndex = y * stringSize + x * (info.bitperpixel / 8);
+
+      temporaryArray[newPixelIndex + 0] = static_cast<uint8_t>(clamp(b, 0.0f, 255.0f));
+      temporaryArray[newPixelIndex + 1] = static_cast<uint8_t>(clamp(g, 0.0f, 255.0f));
+      temporaryArray[newPixelIndex + 2] = static_cast<uint8_t>(clamp(r, 0.0f, 255.0f));
+    }
+  }
+}
+
+void blur(uint8_t*& imgdata, BMPinfo& info) 
+{
   const int kernelsize = 5;
   const int halfKernel = kernelsize / 2;
   const float kernel[5][5] = {
@@ -198,37 +254,39 @@ void blur(uint8_t*& imgdata, BMPinfo& info) {
       {1 / 273.0f, 4 / 273.0f, 7 / 273.0f, 4 / 273.0f, 1 / 273.0f}};
 
   size_t stringSize = (info.width * (info.bitperpixel / 8) + 3) & ~3;
-
   uint8_t* temporaryArray = new uint8_t[stringSize * info.height];
 
-  for (int y = 0; y < info.height; ++y) {
-    for (int x = 0; x < info.width; ++x) {
-      float r = 0.0f;
-      float g = 0.0f;
-      float b = 0.0f;
+  // Define how much threads we can use
+  unsigned int num_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0)
+  {
+    num_threads = 1;
+    std::cout << "DEBUG: Num threads is 1!" << std::endl;
+  }
 
-      for (int ay = -halfKernel; ay <= halfKernel; ++ay) {
-        for (int bx = -halfKernel; bx <= halfKernel; ++bx) {
-          int cx = clamp(x + bx, 0, info.width - 1);
-          int dy = clamp(y + ay, 0, info.height - 1);
+  std::vector<std::thread> threads;
+  int rows_per_thread = info.height / num_threads;
 
-          size_t pixelIndex = dy * stringSize + cx * (info.bitperpixel / 8);
-          float weight = kernel[ay + halfKernel][bx + halfKernel];
-
-          b += imgdata[pixelIndex + 0] * weight;
-          g += imgdata[pixelIndex + 1] * weight;
-          r += imgdata[pixelIndex + 2] * weight;
-        }
-      }
-
-      size_t newPixelIndex = y * stringSize + x * (info.bitperpixel / 8);
-      temporaryArray[newPixelIndex + 0] =
-          static_cast<uint8_t>(clamp(b, 0.0f, 255.0f));
-      temporaryArray[newPixelIndex + 1] =
-          static_cast<uint8_t>(clamp(g, 0.0f, 255.0f));
-      temporaryArray[newPixelIndex + 2] =
-          static_cast<uint8_t>(clamp(r, 0.0f, 255.0f));
+  for (unsigned int i = 0; i < num_threads; ++i)
+  {
+    int start_y = i * rows_per_thread;
+    int end_y;
+    if (i == num_threads - 1)
+    {
+      end_y = info.height;
     }
+    else 
+    {
+      end_y = (i + 1) * rows_per_thread;
+    }
+
+    // Create new thread and add in vector
+    threads.emplace_back(blurSegment, imgdata, temporaryArray, std::ref(info), start_y, end_y, stringSize, std::ref(kernel), std::ref(halfKernel));
+  }
+
+  for (std::thread& current_thread : threads)
+  {
+    current_thread.join();
   }
 
   std::memcpy(imgdata, temporaryArray, stringSize * info.height);
