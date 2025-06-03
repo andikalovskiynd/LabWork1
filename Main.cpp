@@ -1,6 +1,6 @@
 /**
- * @file Main.cpp 
- * @brief Main file where the task is being completed. 
+ * @file Main.cpp
+ * @brief Main file where the task is being completed.
 */
 
 /*
@@ -11,31 +11,70 @@ LabWork 1
 */
 
 #include <iostream>
+#include <chrono>
 #include "BMPheaders.h"
 #include "Functions.h"
 
 int main() {
-  const char* filename = "image.bmp";
-  BMPinfo info;
-  size_t imgsize = 0;
-  uint8_t* imgdata = load(filename, imgsize, info);
+    const char* filename = "image.bmp";
+    const int REPETITIONS = 15;
 
-  if (imgdata) {
-    std::cout << "Image is successfully loaded. Size of it is " << imgsize << " bytes." << std::endl;
+    std::cout << "Starting performance test with " << REPETITIONS << " repetitions." << std::endl;
 
-    rotateforward(imgdata, info, imgsize);
-    save("rotated1.bmp", imgdata, imgsize, info);
+    // TEST 1:
+    long long sequentTime = 0;
 
-    rotatebackwards(imgdata, info, imgsize);
-    save("rotated1and2.bmp", imgdata, imgsize, info);
+    for (int i = 0; i < REPETITIONS; ++i) {
+        BMPinfo seqInfo;
+        size_t seqSize = 0;
+        uint8_t* seqData = load(filename, seqSize, seqInfo);
 
-    blur(imgdata, info);
-    save("rotatedAndBlurred.bmp", imgdata, imgsize, info);
-  }
+        if (!seqData) {
+            std::cerr << "Error loading image for sequential test repetition " << i + 1 << std::endl;
+            continue;
+        }
+        auto start_time = std::chrono::high_resolution_clock::now();
 
-  else {
-    std::cout << "An error occured while loading image." << std::endl;
-  }
+        rotateforward(seqData, seqInfo, seqSize);
+        rotatebackwards(seqData, seqInfo, seqSize);
+        oldBlur(seqData, seqInfo);
 
-  return 0;
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        sequentTime += duration.count();
+
+        delete[] seqData;
+    }
+
+    std::cout << "Total time for " << REPETITIONS << " sequential runs is " << sequentTime << " ms" << std::endl;
+    std::cout << "Average sequential time per run: " << static_cast<double>(sequentTime) / REPETITIONS << " ms" << std::endl;
+
+    long long parallelTime = 0;
+    for (int i = 0; i < REPETITIONS; ++i) {
+        BMPinfo parInfo;
+        size_t parSize = 0;
+        uint8_t* parData = load(filename, parSize, parInfo);
+
+        if (!parData) {
+            std::cerr << "Error loading image for sequential test repetition " << i + 1 << std::endl;
+            continue;
+        }
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        rotateforward(parData, parInfo, parSize);
+        rotatebackwards(parData, parInfo, parSize);
+        blur(parData, parInfo);
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        sequentTime += duration.count();
+
+        delete[] parData;
+    }
+
+    std::cout << "Total time for " << REPETITIONS << " parallel runs: " << parallelTime << " ms" << std::endl;
+    std::cout << "Average parallel time per run: " << static_cast<double>(parallelTime) / REPETITIONS << " ms" << std::endl;
+
+    std::cout << "Totally parallel is " << sequentTime - parallelTime << " ms faster than sequent." << std::endl;
+    std::cout << "Averagely parallel is " << static_cast<double>(sequentTime) / REPETITIONS - static_cast<double>(parallelTime) / REPETITIONS<< " ms faster than sequent." << std::endl;
 }

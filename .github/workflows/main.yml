@@ -1,0 +1,39 @@
+name: Performance Benchmark (Make)
+
+on:
+  workflow_dispatch: 
+  push:
+    branches:
+      - main
+      - parallel
+  pull_request:
+    branches:
+      - main 
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository 
+      uses: actions/checkout@v4
+
+    - name: Set up C++ Build Environment 
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential 
+
+    - name: Build Project 
+      run: make
+
+    - name: Run Benchmark and Capture Results 
+      run: ./image_processor > benchmark_results.txt
+
+    - name: Upload Benchmark Results 
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: benchmark_results.txt 
+
+    - name: Display Benchmark Summary
+      run: cat benchmark_results.txt 
