@@ -1,46 +1,42 @@
-PROJECT = labwork
-LIBPROJECT = $(PROJECT).a
-TESTPROJECT = test-$(PROJECT)
+GTEST_INC_DIR ?= /usr/local/include
+GTEST_LIB_DIR ?= /usr/local/lib
 
 CXX = g++
-A = ar
-AFLAGS = rcs
+CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic -Iinclude -I$(GTEST_INC_DIR) -fsanitize=address
 
-CXXFLAGS = -std=c++17 -Wall -Werror -Wpedantic -g
-LDFLAGS = $(CXXFLAGS)
-LDGTESTFLAGS = $(LDFLAGS) -lgtest -lgtest_main -lpthread
+TEST_LDFLAGS = -L$(GTEST_LIB_DIR) -lgtest_main -lgtest -pthread -fsanitize=address
+MAIN_LDFLAGS = -fsanitize=address
 
-DEPS = $(wildcard *.h)
+TEST_TARGET = test_bmp
+MAIN_TARGET = labwork1
 
-SRCS = Main.cpp Functions.cpp
-OBJS = $(SRCS:.cpp=.o)
+FILE_SOURCES = Functions.cpp
+TEST_MAIN_SOURCE = test.cpp
+MAIN_APP_SOURCE = Main.cpp
 
-TEST-OBJS = test-main.o test-functions.o
+FILE_OBJECTS = $(patsubst %.cpp,%.o,$(FILE_SOURCES))
+TEST_OBJECTS = $(patsubst %.cpp,%.o,$(TEST_MAIN_SOURCE))
+MAIN_APP_OBJECTS = $(patsubst %.cpp,%.o,$(MAIN_APP_SOURCE))
 
-.PHONY: default
-default: all
+all: $(TEST_TARGET) $(MAIN_TARGET)
 
-all: $(PROJECT)
+$(TEST_TARGET): $(FILE_OBJECTS) $(TEST_OBJECTS)
+	$(CXX) $(TEST_LDFLAGS) $^ -o $@
 
-$(PROJECT): Main.o $(LIBPROJECT)
-	$(CXX) -o $@ $^ $(LDFLAGS)
+$(MAIN_TARGET): $(FILE_OBJECTS) $(MAIN_APP_OBJECTS)
+	$(CXX) $(MAIN_LDFLAGS) $^ -o $@
 
-$(LIBPROJECT): $(OBJS)
-	$(A) $(AFLAGS) $@ $^
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-%.o: %.cpp $(DEPS)
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
 
-$(TESTPROJECT): $(LIBPROJECT) $(TEST-OBJS)
-	$(CXX) -o $@ $(TEST-OBJS) $(LIBPROJECT) $(LDGTESTFLAGS)
+app: $(MAIN_TARGET)
+	./$(MAIN_TARGET)
 
-test: $(TESTPROJECT)
-
-.PHONY: clean
 clean:
-	rm -f *.o
-
-cleanall: clean
-	rm -f $(PROJECT)
-	rm -f $(LIBPROJECT)
-	rm -f $(TESTPROJECT)
+	rm -f $(TEST_TARGET) $(MAIN_TARGET) $(FILE_OBJECTS) $(TEST_OBJECTS) $(MAIN_APP_OBJECTS)
+	rm -f saved_4pixel.bmp 
+	
+.PHONY: all test run clean

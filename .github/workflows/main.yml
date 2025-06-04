@@ -1,0 +1,41 @@
+name: C++ Skip List CI
+
+on:
+  push:
+    branches:
+      - main 
+      - parallel
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-22.04 
+
+    steps:
+    - name: Checkout code 
+      uses: actions/checkout@v4
+
+    - name: Install build dependencies 
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake 
+
+    - name: Build and Install Google Test (with Make)
+      run: |
+        git clone https://github.com/google/googletest.git /tmp/googletest
+
+        mkdir -p /tmp/googletest/build
+        cd /tmp/googletest/build
+        
+        cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local
+
+        sudo make -j$(nproc)
+        sudo make install
+
+    - name: Build project 
+      run: make app 
+
+    - name: Run tests
+      run: make test 
