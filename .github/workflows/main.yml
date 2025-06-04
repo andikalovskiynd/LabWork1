@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main 
-      - 'feat/**'
+      - parallel
   pull_request:
     branches:
       - main
@@ -35,7 +35,7 @@ jobs:
         sudo make install
 
     - name: Build project 
-      run: make all 
+      run: make app 
 
     - name: Run tests
       run: make test 
