@@ -13,18 +13,11 @@ LabWork 1
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <vector>
 #include <thread>
 
 #include "Functions.h"
 
-/**
- * @brief Template function that checks if value is in range.
- * @tparam T Value that is being checked. Should support standard operators.
- * @param value Value that we want to check.
- * @param low Lower boundary of checking.
- * @param high Higher boundary of checking.
- * @return Low if value is less than low, high if value is greater than high, value otherwise.
-*/
 template <typename T>
 T clamp(T value, T low, T high) {
     if (value < low) {
