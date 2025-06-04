@@ -68,6 +68,7 @@ TEST(SaveTest, SaveValidData) {
     EXPECT_EQ(saved_imgsize, imgsize);
 
     delete[] imgdata;
+    delete[] saved_imgdata;
 }
 
 /**
